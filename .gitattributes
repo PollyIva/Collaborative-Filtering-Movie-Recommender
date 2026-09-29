@@ -1,0 +1,5 @@
+# The MovieLens data files must stay byte-for-byte identical to the originals.
+# Without this, core.autocrlf would rewrite their LF line endings to CRLF on
+# checkout, silently corrupting the dataset.
+u.data -text
+u.item -text

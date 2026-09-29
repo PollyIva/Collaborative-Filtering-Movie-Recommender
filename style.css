@@ -1,0 +1,326 @@
+/* ==========================================================================
+   style.css — Collaborative Filtering Movie Recommender
+   Layout: centred container, two result columns that stack on narrow screens.
+   ========================================================================== */
+
+/* --- Reset ---------------------------------------------------------------- */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+/* --- Base ----------------------------------------------------------------- */
+body {
+    font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    line-height: 1.6;
+    color: #23303a;
+    background: #f4f7f6;
+    min-height: 100vh;
+    padding: 24px 16px;
+}
+
+/* --- Main container ------------------------------------------------------- */
+.container {
+    max-width: 980px;
+    margin: 0 auto;
+}
+
+/* --- Card: the white rounded panel that holds grouped content ------------- */
+.card {
+    background: #ffffff;
+    border-radius: 12px;
+    box-shadow: 0 2px 10px rgba(16, 40, 60, 0.08);
+    padding: 28px 32px;
+    margin-bottom: 24px;
+}
+
+/* --- Header --------------------------------------------------------------- */
+header {
+    background: #ffffff;
+    border-radius: 12px;
+    box-shadow: 0 2px 10px rgba(16, 40, 60, 0.08);
+    padding: 36px 32px;
+    margin-bottom: 24px;
+    text-align: center;
+}
+
+header h1 {
+    font-size: 1.9rem;
+    font-weight: 600;
+    color: #1b6ca8;
+    margin-bottom: 12px;
+}
+
+.subtitle {
+    color: #5a6b78;
+    max-width: 720px;
+    margin: 0 auto;
+    font-size: 0.98rem;
+}
+
+.subtitle strong {
+    color: #1b6ca8;
+}
+
+/* --- Section headings ----------------------------------------------------- */
+.card h2 {
+    font-size: 1.15rem;
+    font-weight: 600;
+    color: #1b3d57;
+    margin-bottom: 16px;
+}
+
+h3 {
+    font-size: 1rem;
+    font-weight: 600;
+    color: #1b6ca8;
+    margin-bottom: 8px;
+}
+
+/* --- Controls ------------------------------------------------------------- */
+.controls {
+    display: flex;
+    align-items: flex-end;
+    gap: 16px;
+    flex-wrap: wrap;
+}
+
+.input-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    flex: 1 1 220px;
+}
+
+label {
+    font-weight: 600;
+    font-size: 0.9rem;
+    color: #35505f;
+}
+
+/* --- Select --------------------------------------------------------------- */
+select {
+    padding: 11px 12px;
+    border: 1px solid #cfd9df;
+    border-radius: 8px;
+    font-size: 1rem;
+    font-family: inherit;
+    color: #23303a;
+    background: #ffffff;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+select:focus {
+    outline: none;
+    border-color: #1b6ca8;
+    box-shadow: 0 0 0 3px rgba(27, 108, 168, 0.15);
+}
+
+select:disabled {
+    background: #f1f4f6;
+    color: #8a99a5;
+    cursor: not-allowed;
+}
+
+/* --- Button --------------------------------------------------------------- */
+button {
+    padding: 12px 26px;
+    background: #1b6ca8;
+    color: #ffffff;
+    border: none;
+    border-radius: 8px;
+    font-size: 1rem;
+    font-weight: 600;
+    font-family: inherit;
+    cursor: pointer;
+    transition: background 0.2s ease, transform 0.1s ease, box-shadow 0.2s ease;
+}
+
+button:hover:not(:disabled) {
+    background: #155a8c;
+    box-shadow: 0 4px 12px rgba(27, 108, 168, 0.3);
+    transform: translateY(-1px);
+}
+
+button:active:not(:disabled) {
+    transform: translateY(0);
+}
+
+button:disabled {
+    background: #b6c2cb;
+    cursor: not-allowed;
+}
+
+/* --- Status line ---------------------------------------------------------- */
+.status {
+    margin-top: 16px;
+    padding: 12px 16px;
+    background: #f1f6fa;
+    border-left: 4px solid #1b6ca8;
+    border-radius: 0 8px 8px 0;
+    font-size: 0.92rem;
+    color: #35505f;
+}
+
+.status.error {
+    background: #fdf0ef;
+    border-left-color: #c0392b;
+    color: #8c2b20;
+}
+
+/* --- Result area: two columns on wide screens ----------------------------- */
+#result-box {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+    margin-bottom: 24px;
+}
+
+.result-panel {
+    background: #ffffff;
+    border-radius: 12px;
+    box-shadow: 0 2px 10px rgba(16, 40, 60, 0.08);
+    padding: 24px 26px;
+    /* Light tint so the two approaches read as visually distinct blocks */
+    border-top: 4px solid #1b6ca8;
+}
+
+#item-based-result {
+    border-top-color: #1f8a70;
+}
+
+.result-panel h2 {
+    font-size: 1.05rem;
+    font-weight: 600;
+    color: #1b3d57;
+    margin-bottom: 6px;
+}
+
+.panel-why {
+    font-size: 0.88rem;
+    color: #6b7c88;
+    font-style: italic;
+    margin-bottom: 16px;
+}
+
+/* --- Recommendation list -------------------------------------------------- */
+.rec-list {
+    list-style: none;
+    counter-reset: rec;
+}
+
+.rec-list li {
+    counter-increment: rec;
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 12px;
+    padding: 10px 12px;
+    margin-bottom: 8px;
+    background: #f7f9fa;
+    border-radius: 8px;
+    border-left: 3px solid #cfd9df;
+}
+
+#user-based-result .rec-list li {
+    border-left-color: #1b6ca8;
+}
+
+#item-based-result .rec-list li {
+    border-left-color: #1f8a70;
+}
+
+.rec-list li::before {
+    content: counter(rec);
+    font-weight: 700;
+    color: #93a3ae;
+    min-width: 16px;
+}
+
+.rec-title {
+    flex: 1;
+    font-size: 0.95rem;
+    color: #23303a;
+}
+
+.rec-score {
+    font-weight: 700;
+    font-size: 0.9rem;
+    color: #1b6ca8;
+    white-space: nowrap;
+}
+
+#item-based-result .rec-score {
+    color: #1f8a70;
+}
+
+/* Empty-state message inside a result panel */
+.rec-empty {
+    padding: 14px 16px;
+    background: #fdf7e7;
+    border-left: 4px solid #d99b28;
+    border-radius: 0 8px 8px 0;
+    font-size: 0.9rem;
+    color: #7a5a12;
+}
+
+/* --- "How it works" explanation ------------------------------------------ */
+.compare-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 28px;
+}
+
+.steps {
+    list-style: decimal;
+    padding-left: 20px;
+    font-size: 0.9rem;
+    color: #4a5b68;
+}
+
+.steps li {
+    margin-bottom: 8px;
+}
+
+.steps strong {
+    color: #1b6ca8;
+}
+
+.note {
+    margin-top: 22px;
+    padding: 14px 16px;
+    background: #f7f9fa;
+    border-radius: 8px;
+    font-size: 0.88rem;
+    color: #5a6b78;
+    border-left: 4px solid #cfd9df;
+}
+
+.note strong {
+    color: #35505f;
+}
+
+/* --- Narrow screens: stack the two result columns ------------------------- */
+@media (max-width: 720px) {
+    .compare-grid,
+    #result-box {
+        grid-template-columns: 1fr;
+    }
+
+    header {
+        padding: 26px 20px;
+    }
+
+    header h1 {
+        font-size: 1.5rem;
+    }
+
+    .card {
+        padding: 22px 18px;
+    }
+
+    button {
+        width: 100%;
+    }
+}

@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Collaborative Filtering Movie Recommender</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+
+        <header>
+            <h1>Collaborative Filtering Movie Recommender</h1>
+            <p class="subtitle">
+                Pick a user from the MovieLens 100K dataset. You will get two Top-5 lists
+                computed two different ways &mdash; <strong>User-Based CF</strong> (recommends what
+                similar people liked) and <strong>Item-Based CF</strong> (recommends movies similar
+                to the ones this user rated) &mdash; so the two can be compared side by side.
+            </p>
+        </header>
+
+        <section class="card">
+            <div class="controls">
+                <div class="input-group">
+                    <label for="user-select">Select User</label>
+                    <select id="user-select" disabled>
+                        <option value="">Loading users&hellip;</option>
+                    </select>
+                </div>
+                <button id="recommend-btn" onclick="getRecommendations()" disabled>Get Recommendations</button>
+            </div>
+            <p id="status" class="status">Loading MovieLens data&hellip;</p>
+        </section>
+
+        <div id="result-box">
+            <div id="user-based-result" class="result-panel">
+                <h2>User-Based Collaborative Filtering</h2>
+                <p class="panel-why">Because you are similar to other users, we recommend:</p>
+                <ol class="rec-list"></ol>
+            </div>
+
+            <div id="item-based-result" class="result-panel">
+                <h2>Item-Based Collaborative Filtering</h2>
+                <p class="panel-why">Because you liked certain movies, we recommend:</p>
+                <ol class="rec-list"></ol>
+            </div>
+        </div>
+
+        <section class="card">
+            <h2>How the two lists are built</h2>
+            <div class="compare-grid">
+                <div>
+                    <h3>User-Based</h3>
+                    <ol class="steps">
+                        <li>Compare the active user's rating vector with every other user using <strong>cosine similarity</strong> over co-rated movies only.</li>
+                        <li>Keep the <strong id="neighbour-count">20</strong> most similar users (positive similarity, at least 5 co-rated movies).</li>
+                        <li>For every unseen movie, predict a score as the similarity-weighted average of those neighbours' ratings.</li>
+                        <li>Rank by predicted score and show the Top-5.</li>
+                    </ol>
+                </div>
+                <div>
+                    <h3>Item-Based</h3>
+                    <ol class="steps">
+                        <li>Compare every movie's rating column with every other movie's column using the <strong>same cosine similarity</strong> function.</li>
+                        <li>For a movie the user has not seen, aggregate the similarities from the movies they <em>did</em> rate, weighted by the rating they gave.</li>
+                        <li>Rank by the aggregated score and show the Top-5.</li>
+                    </ol>
+                </div>
+            </div>
+            <p class="note">
+                <strong>Missing values:</strong> the rating matrix is 93.7% empty, so every
+                similarity is computed over <em>co-rated items only</em> &mdash; a movie one user
+                has not seen is simply skipped rather than treated as a zero. This single strategy
+                is used consistently everywhere.
+            </p>
+        </section>
+
+    </div>
+
+    <script src="data.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>
