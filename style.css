@@ -152,6 +152,32 @@ button:disabled {
     cursor: not-allowed;
 }
 
+/* --- Selection summary ---------------------------------------------------- */
+.selection {
+    margin-top: 16px;
+    padding: 10px 16px;
+    background: #eef7f0;
+    border-left: 4px solid #2e8b57;
+    border-radius: 0 8px 8px 0;
+    font-size: 0.92rem;
+    font-weight: 600;
+    color: #245c3a;
+    word-break: break-word;
+}
+
+.selection.muted {
+    background: #f4f5f6;
+    border-left-color: #9aa7b0;
+    color: #6c7a85;
+    font-weight: 500;
+}
+
+.label-hint {
+    font-weight: 400;
+    font-size: 0.82rem;
+    color: #7a8b96;
+}
+
 /* --- Status line ---------------------------------------------------------- */
 .status {
     margin-top: 16px;

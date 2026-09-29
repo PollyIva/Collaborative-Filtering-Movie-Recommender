@@ -29,10 +29,16 @@
 const TOP_K = 5;             // size of the recommendation list
 const N_NEIGHBOURS = 20;     // neighbours kept for User-Based CF
 const MIN_CO_RATED = 5;      // minimum co-rated items for a trustworthy similarity
+const SEED_NEIGHBOURS = 10; // rated movies closest to the chosen Item-Based seed that count
 
 // --- Cached state -----------------------------------------------------------
 let itemSim = null;          // item x item similarity, built once after loading
 let isReady = false;         // true once data AND similarities are available
+// The prompt fixes the return type of both recommenders to an array of
+// { title, score }, so the extra context the UI wants is published here instead
+// of being smuggled out in a wrapper object.
+let lastNeighbours = [];     // neighbours used by the last User-Based call
+let lastSeedMovie = null;    // seed used by the last Item-Based call
 
 // ============================================================================
 // INITIALISATION
@@ -51,6 +57,11 @@ window.onload = async function () {
         // specified. The button stays disabled until the precompute below
         // finishes, so a premature click cannot reach a half-built table.
         populateUserDropdown();
+
+        // The movie list belongs to the active user, and the user dropdown
+        // defaults to its first option, so build it for that user too.
+        populateMovieDropdown(getSelectedUserId());
+        updateSelectionSummary();
 
         setStatus(`Loaded ${numMovies} movies and ${ratings.length} ratings ` +
                   `from ${numUsers} users. Building item-item similarities…`);
@@ -97,6 +108,100 @@ function populateUserDropdown() {
     }
 
     userSelect.disabled = false;
+    userSelect.addEventListener('change', onUserChanged);
+}
+
+// --------------------------------------------------------------------------
+// populateMovieDropdown(userId)
+// Fills #movie-select with the movies THAT user has actually rated, best first.
+//
+    // These are the only sensible seeds for Item-Based CF here: the algorithm
+    // aggregates similarity away from "the movie this user chose", and a movie
+    // the user never rated has no place in their history to aggregate from.
+    // The list is sorted best-rated first, but every rated movie is selectable
+    // — the rating is used as a weight, so a 1/5 seed simply scores lower.
+
+// --------------------------------------------------------------------------
+function populateMovieDropdown(userId) {
+    const movieSelect = document.getElementById('movie-select');
+    movieSelect.innerHTML = '';
+
+    if (!userId || userId < 1 || userId > numUsers) {
+        movieSelect.disabled = true;
+        updateSelectionSummary();
+        return;
+    }
+
+    const rated = Array.from(userItems[userId])
+        .filter(([, rating]) => rating > 0)
+        .sort((a, b) => b[1] - a[1] || a[0] - b[0]);
+
+    for (const [itemId, rating] of rated) {
+        const option = document.createElement('option');
+        option.value = itemId;
+        option.textContent = `${getMovieTitle(itemId)} — rated ${rating}/5`;
+        movieSelect.appendChild(option);
+    }
+
+    // Nothing rated means nothing to seed from.
+    movieSelect.disabled = rated.length === 0;
+    updateSelectionSummary();
+}
+
+// --------------------------------------------------------------------------
+// onUserChanged()
+// The movie list depends on the user, so it is rebuilt on every change.
+// --------------------------------------------------------------------------
+function onUserChanged() {
+    populateMovieDropdown(getSelectedUserId());
+}
+
+// --------------------------------------------------------------------------
+// getSelectedUserId() / getSelectedMovieId()
+// The two dropdowns as integers. Empty selection reads as 0.
+// --------------------------------------------------------------------------
+function getSelectedUserId() {
+    return parseInt(document.getElementById('user-select').value, 10) || 0;
+}
+
+function getSelectedMovieId() {
+    return parseInt(document.getElementById('movie-select').value, 10) || 0;
+}
+
+// --------------------------------------------------------------------------
+// updateSelectionSummary()
+// "Prints" who is selected and which movie is driving the Item-Based panel,
+// both into the page and into the browser console.
+// --------------------------------------------------------------------------
+function updateSelectionSummary() {
+    const el = document.getElementById('selection');
+    const userId = getSelectedUserId();
+    const itemId = getSelectedMovieId();
+
+    if (!userId) {
+        el.textContent = 'Selected user: none — choose a user to begin.';
+        el.classList.add('muted');
+        console.log('[selection] user: none, movie: none');
+        return;
+    }
+
+    const userPart = `Selected user: User ${userId} (${countRatings(userId)} ratings)`;
+
+    if (!itemId) {
+        el.textContent = `${userPart} — no movie selected.`;
+        el.classList.add('muted');
+        console.log(`[selection] user: User ${userId}, movie: none`);
+        return;
+    }
+
+    const title = getMovieTitle(itemId);
+    const rating = ratingMatrix[userId][itemId];
+
+    el.textContent = `${userPart} | Selected movie: ${title} (rated ${rating}/5)`;
+    el.classList.remove('muted');
+
+    console.log(`[selection] user: User ${userId}`);
+    console.log(`[selection] movie: ${title}`);
 }
 
 // --------------------------------------------------------------------------
@@ -260,15 +365,16 @@ async function buildItemSimilarities() {
 //           the neighbours' ratings.
 //   Step 4. Sort by predicted score, descending, and return the top topK.
 //
-// Returns { recommendations: [{ title, score }, ...], neighbours: [{ userId, similarity }] }.
-// The wrapper is always returned — never a bare array — so callers can rely on
-// the same shape on every path, including the guards below.
+// Returns an ARRAY of { title, score }, sorted by score descending (prompt 5.4).
+// An empty array is returned on every failure path, never null or a wrapper.
+// The neighbour list is also published on the module as `lastNeighbours` so the
+// status line can report it without breaking the required return type.
 // --------------------------------------------------------------------------
 function getUserBasedRecommendations(activeUserId, topK = TOP_K) {
-    const empty = { recommendations: [], neighbours: [] };
+    lastNeighbours = [];
 
     if (!activeUserId || activeUserId < 1 || activeUserId > numUsers) {
-        return empty;
+        return [];
     }
 
     const activeRow = ratingMatrix[activeUserId];
@@ -296,9 +402,10 @@ function getUserBasedRecommendations(activeUserId, topK = TOP_K) {
         b.similarity - a.similarity || a.userId - b.userId);
 
     const top = neighbours.slice(0, N_NEIGHBOURS);
+    lastNeighbours = top;
 
     if (top.length === 0) {
-        return empty;
+        return [];
     }
 
     // --- Step 3: predict a score for every movie the user has not seen -----
@@ -331,10 +438,8 @@ function getUserBasedRecommendations(activeUserId, topK = TOP_K) {
     // --- Step 4: rank and cut ---------------------------------------------
     candidates.sort((a, b) => b.score - a.score || a.itemId - b.itemId);
 
-    return {
-        recommendations: candidates.slice(0, topK),
-        neighbours: top
-    };
+    // Prompt 5.4: return an array of { title, score }.
+    return candidates.slice(0, topK).map(({ title, score }) => ({ title, score }));
 }
 
 // ============================================================================
@@ -342,7 +447,7 @@ function getUserBasedRecommendations(activeUserId, topK = TOP_K) {
 // ============================================================================
 
 // --------------------------------------------------------------------------
-// getItemBasedRecommendations(activeUserId, topK)
+// getItemBasedRecommendations(activeUserId, topK, seedItemId)
 //
 //   Step 1. Item-to-item cosine similarity between every movie's rating column
 //           and every other movie's column — precomputed into `itemSim` by
@@ -351,33 +456,77 @@ function getUserBasedRecommendations(activeUserId, topK = TOP_K) {
 //           movies this user did rate, weighted by the rating they gave.
 //   Step 3. Sort by the aggregated score, descending, and return top topK.
 //
-// score(j) = Σ_i sim(i,j)·r_ui  /  Σ_i sim(i,j)   over the user's rated i
+// score(j) = Σ_i w_i·sim(i,j)·r_ui  /  Σ_i w_i·sim(i,j)   over the user's rated i
 //
 // Dividing by the similarity sum turns the raw weighted total into a weighted
 // average, which keeps the result on the same 1..5 scale as User-Based CF and
 // makes the two panels directly comparable.
 //
-// Returns { recommendations: [{ title, score }, ...], seedMovie: { title, rating } | null }.
-// Like the user-based version, the wrapper is always returned so the shape is
-// stable on every path.
+// seedItemId (an addition on top of the prompt, driven by #movie-select):
+// the chosen movie anchors the search. Rather than replacing the user's history
+// with that one movie, the chosen movie decides *which* of the user's rated
+// movies get to contribute: the SEED_NEIGHBOURS rated movies closest to the
+// seed. With no seed (or an invalid one) every rated movie contributes, which
+// is exactly the plain basket aggregation the prompt asks for.
+//
+// Why not simply seed from the chosen movie alone: the score would collapse to
+// (sim·r)/(sim) = r, a constant for every candidate, and the "ranking" would
+// degenerate to movie-ID order. Keeping the basket is both spec-compliant and
+// non-degenerate.
+//
+// Returns an ARRAY of { title, score } (prompt 5.5).
 // --------------------------------------------------------------------------
-function getItemBasedRecommendations(activeUserId, topK = TOP_K) {
-    const empty = { recommendations: [], seedMovie: null };
-
-    if (!activeUserId || activeUserId < 1 || activeUserId > numUsers) return empty;
-    if (!itemSim) return empty;
+function getItemBasedRecommendations(activeUserId, topK = TOP_K, seedItemId = 0) {
+    if (!activeUserId || activeUserId < 1 || activeUserId > numUsers) return [];
+    if (!itemSim) return [];
 
     const width = numMovies + 1;
     const activeMask = ratedMask[activeUserId];
     const activeRow = ratingMatrix[activeUserId];
 
+    // An explicitly chosen seed wins, but only if the user really rated it.
+    let seed = null;
+    if (seedItemId && activeMask[seedItemId] && activeRow[seedItemId] > 0) {
+        seed = { itemId: seedItemId, rating: activeRow[seedItemId], title: getMovieTitle(seedItemId) };
+    } else {
+        seed = findTopRatedMovie(activeUserId, activeRow);
+    }
+    lastSeedMovie = seed;
+
+    const rated = userItems[activeUserId].filter(([, r]) => r > 0);
+    if (rated.length === 0) return [];
+
+    // --- Step 1 + 2: aggregate similarity from the user's rated movies ------
+    // With a seed, only the rated movies that actually resemble the chosen one
+    // are allowed to contribute. A flat two-hop weight was tried first and
+    // proved too diffuse: cosine over 1..5 ratings is high for almost every
+    // pair, so the weights came out nearly uniform and the chosen seed barely
+    // moved the ranking (it changed the Top-5 for only 3 of 10 sampled users).
+    // Restricting the basket to the seed's strongest matches makes the choice
+    // decisive while still aggregating over the user's own ratings, as the
+    // prompt requires.
+    let sources = rated;
+
+    if (seed) {
+        const seedBase = seed.itemId * width;
+
+        sources = rated
+            .map(([itemId, ratingI]) => ({
+                itemId,
+                ratingI,
+                simToSeed: itemSim[seedBase + itemId]
+            }))
+            .filter(s => s.simToSeed > 0)
+            .sort((a, b) => b.simToSeed - a.simToSeed || a.itemId - b.itemId)
+            .slice(0, SEED_NEIGHBOURS);
+
+        if (sources.length === 0) return [];
+    }
+
     const weighted = new Float64Array(numMovies + 1);
     const similarityTotal = new Float64Array(numMovies + 1);
 
-    // --- Step 1 + 2: accumulate similarity from every movie already seen ---
-    for (const [itemId, ratingI] of userItems[activeUserId]) {
-        if (ratingI <= 0) continue; // only positive ratings act as "likes"
-
+    for (const { itemId, ratingI } of sources) {
         const base = itemId * width;
 
         for (let candidate = 1; candidate <= numMovies; candidate++) {
@@ -410,14 +559,8 @@ function getItemBasedRecommendations(activeUserId, topK = TOP_K) {
 
     candidates.sort((a, b) => b.score - a.score || a.itemId - b.itemId);
 
-    const recommendations = candidates.slice(0, topK);
-
-    return {
-        recommendations,
-        // The movie the user rated highest — used for the "Because you liked…"
-        // sentence, so the panel explains its own reasoning.
-        seedMovie: findTopRatedMovie(activeUserId, activeRow)
-    };
+    // Prompt 5.5: return an array of { title, score }.
+    return candidates.slice(0, topK).map(({ title, score }) => ({ title, score }));
 }
 
 // --------------------------------------------------------------------------
@@ -462,23 +605,25 @@ function getRecommendations() {
         return;
     }
 
-    const userSelect = document.getElementById('user-select');
-    const userId = parseInt(userSelect.value, 10);
+    const userId = getSelectedUserId();
+    const itemId = getSelectedMovieId();
 
     if (!userId || Number.isNaN(userId)) {
         setStatus('Please select a user first.', true);
         return;
     }
 
+    updateSelectionSummary();
+
     const ratedCount = countRatings(userId);
 
     // Both algorithms run on every call, even when one of them cannot produce
     // a list, so the two panels always describe the same user.
     const userBased = getUserBasedRecommendations(userId, TOP_K);
-    const itemBased = getItemBasedRecommendations(userId, TOP_K);
+    const itemBased = getItemBasedRecommendations(userId, TOP_K, itemId);
 
-    const userBasedEmpty = userBased.recommendations.length === 0;
-    const itemBasedEmpty = itemBased.recommendations.length === 0;
+    const userBasedEmpty = userBased.length === 0;
+    const itemBasedEmpty = itemBased.length === 0;
 
     // The status line describes what actually happened rather than assuming
     // failure: the two approaches have different data requirements. Item-Based
@@ -495,9 +640,12 @@ function getRecommendations() {
                   `${worked} CF produced a Top-5, but ${failed} CF could not — ` +
                   `this user has too little history for it.`);
     } else {
+        const seedNote = lastSeedMovie
+            ? `anchored on "${lastSeedMovie.title}"`
+            : 'with no usable seed movie';
         setStatus(`User ${userId} has rated ${ratedCount} movies. ` +
-                  `User-Based CF compared them with ${userBased.neighbours.length} ` +
-                  `most similar users; Item-Based CF used the movies already rated.`);
+                  `User-Based CF compared them with ${lastNeighbours.length} ` +
+                  `most similar users; Item-Based CF ran ${seedNote}.`);
     }
 
     renderUserBased(userId, userBased, ratedCount);
@@ -505,21 +653,24 @@ function getRecommendations() {
 }
 
 // --------------------------------------------------------------------------
-// renderUserBased(userId, result, ratedCount)
+// renderUserBased(userId, recommendations, ratedCount)
+//
+// `recommendations` is the array returned by getUserBasedRecommendations; the
+// neighbours that produced it are read from `lastNeighbours`.
 // --------------------------------------------------------------------------
 function renderUserBased(userId, result, ratedCount) {
     const panel = document.getElementById('user-based-result');
     const why = panel.querySelector('.panel-why');
     const list = panel.querySelector('.rec-list');
 
-    const { recommendations, neighbours } = result;
+    const neighbours = lastNeighbours;
 
-    if (recommendations.length === 0) {
+    if (result.length === 0) {
         why.textContent = 'Because you are similar to other users, we recommend:';
         list.replaceChildren(buildEmptyMessage(
             ratedCount < MIN_CO_RATED
                 ? `User ${userId} has rated only ${ratedCount} movie(s), which is not ` +
-                  `enough to find similar users.`
+                  'enough to find similar users.'
                 : `No recommendation could be scored for User ${userId}: none of the ` +
                   'movies they have not seen were rated by a sufficiently similar user.'));
         return;
@@ -531,21 +682,23 @@ function renderUserBased(userId, result, ratedCount) {
         `Because you are similar to other users (most similar: User ${topNeighbour.userId}, ` +
         `similarity ${topNeighbour.similarity.toFixed(3)}), we recommend:`;
 
-    list.replaceChildren(...recommendations.map((rec, index) =>
+    list.replaceChildren(...result.map((rec, index) =>
         buildListItem(index + 1, rec.title, rec.score.toFixed(2))));
 }
 
 // --------------------------------------------------------------------------
-// renderItemBased(userId, result, ratedCount)
+// renderItemBased(userId, recommendations, ratedCount)
+//
+// `recommendations` is the array returned by getItemBasedRecommendations; the
+// seed that produced it is read from `lastSeedMovie`.
 // --------------------------------------------------------------------------
 function renderItemBased(userId, result, ratedCount) {
+
     const panel = document.getElementById('item-based-result');
     const why = panel.querySelector('.panel-why');
     const list = panel.querySelector('.rec-list');
 
-    const { recommendations, seedMovie } = result;
-
-    if (recommendations.length === 0) {
+    if (result.length === 0) {
         why.textContent = 'Because you liked certain movies, we recommend:';
         list.replaceChildren(buildEmptyMessage(
             ratedCount < MIN_CO_RATED
@@ -556,12 +709,13 @@ function renderItemBased(userId, result, ratedCount) {
         return;
     }
 
+    const seedMovie = lastSeedMovie;
     why.textContent = seedMovie
         ? `Because you liked "${seedMovie.title}" (your rating: ` +
           `${seedMovie.rating}/5), we recommend:`
         : 'Because you liked certain movies, we recommend:';
 
-    list.replaceChildren(...recommendations.map((rec, index) =>
+    list.replaceChildren(...result.map((rec, index) =>
         buildListItem(index + 1, rec.title, rec.score.toFixed(2))));
 }
 

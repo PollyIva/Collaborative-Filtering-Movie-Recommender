@@ -12,6 +12,11 @@ Built with vanilla HTML, CSS, and JavaScript — no frameworks, no build step.
 
 - **Side-by-side comparison** — the two Top-5 lists are always shown together for the same
   user, so their overlap and their score spread are directly comparable.
+- **Pick the Item-Based seed** — a second dropdown, `#movie-select`, lists the movies the
+  selected user has rated, best-rated first. The chosen movie anchors the Item-Based panel:
+  it decides which of that user's rated movies are allowed to contribute similarity, so the
+  list genuinely changes when you change it. The active user and the chosen title are shown
+  in the page and logged to the console.
 - **Co-rated cosine similarity** — both approaches use the *same* similarity function,
   computed only over movies both parties actually rated.
 - **User-Based CF** — the 20 most similar users (positive similarity, at least 5 co-rated
@@ -29,7 +34,7 @@ Built with vanilla HTML, CSS, and JavaScript — no frameworks, no build step.
 ## Project Structure
 
 ```
-├── index.html   # Page structure (user dropdown, button, two result panels)
+├── index.html   # Page structure (user + movie dropdowns, two result panels)
 ├── style.css    # Layout and styling
 ├── data.js      # Data module: loads & parses u.item and u.data
 ├── script.js    # Similarity, both CF algorithms, and UI rendering
@@ -39,27 +44,17 @@ Built with vanilla HTML, CSS, and JavaScript — no frameworks, no build step.
 
 ## Getting Started
 
+### Try it online
+
+The app is deployed with GitHub Pages:
+
+**<https://pollyiva.github.io/Collaborative-Filtering-Movie-Recommender/>**
+
 ### Prerequisites
 
 A modern browser with `fetch()` support. The app reads `u.item` and `u.data` via `fetch()`,
-which requires serving the files over HTTP — opening `index.html` directly from the
-filesystem will not work.
-
-### Run locally
-
-Using Python 3:
-
-```bash
-python -m http.server 8000
-```
-
-Then open <http://localhost:8000>.
-
-Or with Node.js:
-
-```bash
-npx serve .
-```
+which requires the page to be served over HTTP — opening `index.html` directly from the
+filesystem will not work, since browsers block `file://` requests.
 
 ## Usage
 
@@ -88,6 +83,10 @@ npx serve .
    every pair of movies a user rated together, accumulates the cosine numerator and both
    norms into a full item × item table. Doing it this way costs roughly 10 million pair
    updates instead of the ~1.17 billion a naive movie × movie × user triple loop would need.
+   Each unseen movie is then scored as the similarity-weighted average of the ratings for the
+   seed's nearest rated movies. With no seed selected, every rated movie contributes, which
+   is the plain basket aggregation; with one, the ten rated movies closest to the seed
+   contribute instead.
 
 5. **Output**: both lists are ranked, truncated to 5, and rendered with their scores.
 

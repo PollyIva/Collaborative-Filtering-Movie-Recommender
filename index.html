@@ -27,8 +27,15 @@
                         <option value="">Loading users&hellip;</option>
                     </select>
                 </div>
+                <div class="input-group">
+                    <label for="movie-select">Select Movie <span class="label-hint">(Item-Based CF seed)</span></label>
+                    <select id="movie-select" disabled>
+                        <option value="">Select a user first&hellip;</option>
+                    </select>
+                </div>
                 <button id="recommend-btn" onclick="getRecommendations()" disabled>Get Recommendations</button>
             </div>
+            <p id="selection" class="selection">&mdash;</p>
             <p id="status" class="status">Loading MovieLens data&hellip;</p>
         </section>
 
