@@ -300,12 +300,14 @@ async function load() {
         const res = await fetch(RESULTS_URL);
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const R = await res.json();
+        root.classList.remove('exp-loading');
         root.innerHTML = '';
         renderWorkedExample(root);
         renderPairSpace(root, R);
         renderAgreement(root, R);
         renderCost(root);
     } catch (err) {
+        root.classList.remove('exp-loading');
         root.innerHTML =
             `<p class="exp-note">Could not load <code>${RESULTS_URL}</code> (${err.message}). Serve the
              folder over HTTP rather than opening <code>index.html</code> from disk, or re-run

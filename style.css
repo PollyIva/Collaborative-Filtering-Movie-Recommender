@@ -11,6 +11,16 @@
 }
 
 /* --- Base ----------------------------------------------------------------- */
+html {
+    scroll-behavior: smooth;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    html {
+        scroll-behavior: auto;
+    }
+}
+
 body {
     font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
     line-height: 1.6;
@@ -87,6 +97,43 @@ header h1 {
 .page-nav a:hover {
     background: #eef7f0;
     border-color: #1f8a70;
+}
+
+.page-nav a.nav-highlight {
+    background: #1b6ca8;
+    border-color: #1b6ca8;
+    color: #ffffff;
+}
+
+.page-nav a.nav-highlight:hover {
+    background: #155a8c;
+    border-color: #155a8c;
+    color: #ffffff;
+}
+
+/* --- "jump to the experiments" link under the results --------------------- */
+.jump {
+    margin: -8px 0 24px;
+    text-align: center;
+}
+
+.jump a {
+    display: inline-block;
+    padding: 11px 22px;
+    background: #ffffff;
+    border: 1.5px solid #1b6ca8;
+    border-radius: 999px;
+    color: #1b6ca8;
+    font-size: 0.9rem;
+    font-weight: 600;
+    text-decoration: none;
+    box-shadow: 0 2px 10px rgba(16, 40, 60, 0.08);
+    transition: background 0.2s ease, color 0.2s ease;
+}
+
+.jump a:hover {
+    background: #1b6ca8;
+    color: #ffffff;
 }
 
 /* --- Section headings ----------------------------------------------------- */
