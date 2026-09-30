@@ -41,6 +41,14 @@ I implemented User-Based and Item-Based Collaborative Filtering on MovieLens 100
 
 Prior work consulted: the MovieLens 100K dataset [1], cosine similarity [2], Pearson correlation [3], item-item collaborative filtering [4], the cold-start problem [5], matrix factorization [6]. Full references are listed in the References section.
 
+**Theory this implementation relies on** — conclusions only, each with its source.
+- *CF splits into memory-based and model-based, and each into user-based and item-based.* Amazon began with user-based CF and moved to item-based **for scalability**, not because accuracy improved. → [Основы рекомендательных систем](https://github.com/researchim-ai/state-of-ai/blob/main/Recommender_systems_research.md#основы-рекомендательных-систем)
+- *k-NN is the cornerstone of classical CF.* It requires no training and is interpretable ("you liked what these similar users liked"), but comparing everything with everything costs O(M·N). User-based suits the case where users are fewer than items, item-based the reverse; cold start is the weak point. → [Алгоритмы и модели рекомендаций](https://github.com/researchim-ai/state-of-ai/blob/main/Recommender_systems_research.md#алгоритмы-и-модели-рекомендаций)
+- *MF became the de-facto standard after the Netflix Prize.* Its latent factors **generalise**: users with no common ratings can still be close. Top-N afterwards is one matrix product, so it gives real-time latency — but factors are hard to explain, and a new user or item has none. Per-user and per-item **bias terms** mitigate this. → [same source](https://github.com/researchim-ai/state-of-ai/blob/main/Recommender_systems_research.md#алгоритмы-и-модели-рекомендаций)
+- *Hybrid methods combine approaches to cancel each other's weaknesses.* Most commercial systems are hybrid; Netflix has been an ensemble of dozens of algorithms — MF, nearest neighbours, genre features — rather than one model. → [Основы рекомендательных систем](https://github.com/researchim-ai/state-of-ai/blob/main/Recommender_systems_research.md#основы-рекомендательных-систем)
+- *Three properties of CF to remember.* It uses nothing but the interaction matrix R_ui; it does not apply to new users or items, which simply have no history; and because it only exploits past interactions it gradually **traps the user in an information bubble**, never surfacing genuinely new interests. → [Особенности коллаборативной фильтрации](https://contest.yandex.ru/tracks/ml/recommender-systems/introduction-to-recommender-systems)
+- *Sparsity is what forces factorisation.* One can also solve the transposed task — for an item a user liked, find items those users often liked together. But since the matrix is very sparse, the natural next step is to recover latent vectors and predict the missing cells; plain SVD is too noisy with so many gaps, so ALS is used. → [Введение в рекомендательные системы](https://contest.yandex.ru/tracks/ml/recommender-systems/introduction-to-recommender-systems)
+
 **Alternatives considered.**
 - *Pearson* — corrects the score saturation but shares the same missing-value exposure, and needs more co-ratings for a stable estimate.
 - *Mean imputation* — the only option that makes every pair computable, and the only one that invents data.
@@ -92,9 +100,38 @@ Prediction, over the 20 nearest users (User-Based) or the 10 rated films nearest
 
 **Setup.** The behavioral test environment was on the GitHub platform. Three runs: (A) pair space and evidence, (B) inter-method agreement, (C) cost. Every figure is measured on the shipped data or read back from the deployed page; none are estimated.
 
+**Worked example.** The transposed and non-transposed tasks of the theory, executed on the real data for user 1 (272 ratings). Their nearest neighbour is user 876, and the entire overlap is seven films.
+
+Table 1: every movie both users rated.
+
+| Movie | user 1 | user 876 |
+|---|---|---|
+| Hoop Dreams (1994) | 5 | 5 |
+| Antonia's Line (1995) | 5 | 5 |
+| Raiders of the Lost Ark (1981) | 5 | 4 |
+| 12 Angry Men (1957) | 5 | 4 |
+| Raising Arizona (1987) | 4 | 4 |
+| Braveheart (1995) | 4 | 4 |
+| Godfather: Part II, The (1974) | 4 | 4 |
+
+`cos = 138.0 / (12.17 × 11.40) = 0.9949` from seven observations, all of them four- or five-star. The 20 neighbours then place five unrated films at exactly `5.000` and *Dante's Peak (1997)* last at `1.000`.
+
+Running the transposed task, the seed *Hoop Dreams (1994)* (Documentary, 117 raters) gives these as its most similar items:
+
+Table 2: items most co-rated with the seed.
+
+| Rank | Movie | cosine | co-raters | Genre |
+|---|---|---|---|---|
+| 1 | Jeffrey (1995) | 0.9962 | 7 | Comedy |
+| 2 | In the Realm of the Senses (1976) | 0.9935 | 5 | Drama |
+| 3 | Paris Is Burning (1990) | 0.9934 | 11 | Documentary |
+| 4 | Haunted World of Edward D. Wood, Jr. (1995) | 0.9923 | 7 | Documentary |
+
+The seven users behind rank 1 rated the pair 5/4, 5/4, 4/3, 4/3, 4/3, 3/3 and 1/1 — near-identical, hence 0.9962. Note the consequence: a **Comedy outranks a Documentary**, because seven almost-identical rating pairs beat eleven slightly less identical ones. Genre-similarity loses to sample size. This is the concrete face of the "few co-rated items" and "rating-scale differences" problems above — a similarity built on 7 observations is more confident than one built on 11, and neither is trustworthy.
+
 **Results (A).** Users are dense and items are not, so the two axes carry unequal statistical weight.
 
-Table 1: pair space and co-rating overlap, from 40,000 sampled pairs per axis.
+Table 3: pair space and co-rating overlap, from 40,000 sampled pairs per axis.
 
 | | User-Based | Item-Based |
 |---|---|---|
@@ -108,7 +145,7 @@ Rating counts: users min 20 / median 65 / max 737; items min 1 / median 27 / max
 
 **Results (B).** User 1, seed = highest-rated film.
 
-Table 2: User-Based against Item-Based, Top-5.
+Table 4: User-Based against Item-Based, Top-5.
 
 | Rank | User-Based | Item-Based |
 |---|---|---|
@@ -122,7 +159,7 @@ Over 472 users the two lists shared one title in total (mean 0.0021; 471 users s
 
 **Results (C).** Headless Chrome against the deployed page, medians over 40 users.
 
-Table 3: measured cost.
+Table 5: measured cost.
 
 | Stage | Cost |
 |---|---|
