@@ -100,38 +100,49 @@ Prediction, over the 20 nearest users (User-Based) or the 10 rated films nearest
 
 **Setup.** The behavioral test environment was on the GitHub platform. Three runs: (A) pair space and evidence, (B) inter-method agreement, (C) cost. Every figure is measured on the shipped data or read back from the deployed page; none are estimated.
 
-**Worked example.** The transposed and non-transposed tasks of the theory, executed on the real data for user 1 (272 ratings). Their nearest neighbour is user 876, and the entire overlap is seven films.
+**Worked example.** The two tasks of the theory, executed on the real data for user 1 (272 ratings) and their four nearest neighbours. Table 1 is the interaction matrix the whole method consumes: users as rows, items as columns, `0` = unrated. Its first seven columns are every film user 1 and user 876 share, which is the entire basis for the nearest-neighbour score.
 
-Table 1: every movie both users rated.
+Table 1: interaction matrix, five users against twelve films.
 
-| Movie | user 1 | user 876 |
-|---|---|---|
-| Hoop Dreams (1994) | 5 | 5 |
-| Antonia's Line (1995) | 5 | 5 |
-| Raiders of the Lost Ark (1981) | 5 | 4 |
-| 12 Angry Men (1957) | 5 | 4 |
-| Raising Arizona (1987) | 4 | 4 |
-| Braveheart (1995) | 4 | 4 |
-| Godfather: Part II, The (1974) | 4 | 4 |
+| user \ item | 19 | 48 | 174 | 178 | 22 | 187 | 238 | 50 | 181 | 286 | 1 | 13 | rated |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| **u1** | 5 | 5 | 5 | 5 | 4 | 4 | 4 | 5 | 5 | 0 | 5 | 5 | 272 |
+| **u876** | 5 | 5 | 4 | 4 | 4 | 4 | 4 | 0 | 0 | 5 | 0 | 0 | 21 |
+| **u516** | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 5 | 4 | 5 | 0 | 0 | 21 |
+| **u895** | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 5 | 5 | 0 | 4 | 5 | 20 |
+| **u105** | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 4 | 0 | 0 | 23 |
 
-`cos = 138.0 / (12.17 × 11.40) = 0.9949` from seven observations, all of them four- or five-star. The 20 neighbours then place five unrated films at exactly `5.000` and *Dante's Peak (1997)* last at `1.000`.
+Columns 19–238 are the seven co-rated films (19 *Antonia's Line*, 48 *Hoop Dreams*, 174 *Raiders of the Lost Ark*, 178 *12 Angry Men*, 22 *Braveheart*, 187 *Godfather: Part II*, 238 *Raising Arizona*); columns 50–13 are rated by at least two of the five. Across those seven, `cos = 138.0 / (12.17 × 11.40) = 0.9949` — seven observations, every one of them four- or five-star. The 20 neighbours then place five unrated films at exactly `5.000` and *Dante's Peak (1997)* last at `1.000`.
 
-Running the transposed task, the seed *Hoop Dreams (1994)* (Documentary, 117 raters) gives these as its most similar items:
+Table 2: user-user cosine similarity, co-rated count in brackets.
 
-Table 2: items most co-rated with the seed.
+| | u1 | u876 | u516 | u895 | u105 | rated |
+|---|---|---|---|---|---|---|
+| **u1** | **1.000** | 0.9949 (7) | 0.9926 (10) | 0.9886 (8) | 0.9877 (7) | 272 |
+| **u876** | 0.9949 (7) | **1.000** | n/a | n/a | n/a | 21 |
+| **u516** | 0.9926 (10) | n/a | **1.000** | n/a | n/a | 21 |
+| **u895** | 0.9886 (8) | n/a | n/a | **1.000** | n/a | 20 |
+| **u105** | 0.9877 (7) | n/a | n/a | n/a | **1.000** | 23 |
 
-| Rank | Movie | cosine | co-raters | Genre |
-|---|---|---|---|---|
-| 1 | Jeffrey (1995) | 0.9962 | 7 | Comedy |
-| 2 | In the Realm of the Senses (1976) | 0.9935 | 5 | Drama |
-| 3 | Paris Is Burning (1990) | 0.9934 | 11 | Documentary |
-| 4 | Haunted World of Edward D. Wood, Jr. (1995) | 0.9923 | 7 | Documentary |
+The transposed task uses the item-item table instead, around the seed *Hoop Dreams* (Documentary, 117 raters).
 
-The seven users behind rank 1 rated the pair 5/4, 5/4, 4/3, 4/3, 4/3, 3/3 and 1/1 — near-identical, hence 0.9962. Note the consequence: a **Comedy outranks a Documentary**, because seven almost-identical rating pairs beat eleven slightly less identical ones. Genre-similarity loses to sample size. This is the concrete face of the "few co-rated items" and "rating-scale differences" problems above — a similarity built on 7 observations is more confident than one built on 11, and neither is trustworthy.
+Table 3: item-item cosine similarity; `n/a` = fewer than five co-raters.
+
+| item \ item | 48 | 372 | 1214 | 645 | 115 |
+|---|---|---|---|---|---|
+| **48** | **1.000** | 0.9962 | 0.9935 | 0.9934 | 0.9923 |
+| **372** | 0.9962 | **1.000** | n/a | 0.9615 | n/a |
+| **1214** | 0.9935 | n/a | **1.000** | n/a | n/a |
+| **645** | 0.9934 | 0.9615 | n/a | **1.000** | n/a |
+| **115** | 0.9923 | n/a | n/a | n/a | **1.000** |
+
+Columns: 48 *Hoop Dreams* (Documentary), 372 *Jeffrey* (Comedy, 0.9962, 7 co-raters), 1214 *In the Realm of the Senses* (Drama, 0.9935, 5), 645 *Paris Is Burning* (Documentary, 0.9934, 11), 115 *Haunted World of Edward D. Wood, Jr.* (Documentary, 0.9923, 7).
+
+Two failures are visible in these three tables. In Table 3 a **Comedy outranks a Documentary**: the seven users behind *Jeffrey* rated the pair 5/4, 5/4, 4/3, 4/3, 4/3, 3/3 and 1/1 — near-identical, hence 0.9962 — and seven almost-identical pairs beat eleven slightly less identical ones. Genre loses to sample size, which is the "few co-rated items" problem made concrete. Table 2 is the more damaging one. User 1 rated 272 films; the four neighbours rated 20–23 each, so their whole histories are barely larger than the overlap with user 1. And they share **zero films among themselves** — every off-diagonal entry is `n/a`. So k-NN is not selecting users with similar taste, it is selecting sparse users who happen to agree, because with seven shared films and no rating dispersion the cosine saturates near 1.0. This is the mechanism behind the saturated `5.000` predictions in Results (B): the evidence is real, it is just far too thin to rank on.
 
 **Results (A).** Users are dense and items are not, so the two axes carry unequal statistical weight.
 
-Table 3: pair space and co-rating overlap, from 40,000 sampled pairs per axis.
+Table 4: pair space and co-rating overlap, from 40,000 sampled pairs per axis.
 
 | | User-Based | Item-Based |
 |---|---|---|
@@ -145,7 +156,7 @@ Rating counts: users min 20 / median 65 / max 737; items min 1 / median 27 / max
 
 **Results (B).** User 1, seed = highest-rated film.
 
-Table 4: User-Based against Item-Based, Top-5.
+Table 5: User-Based against Item-Based, Top-5.
 
 | Rank | User-Based | Item-Based |
 |---|---|---|
@@ -159,7 +170,7 @@ Over 472 users the two lists shared one title in total (mean 0.0021; 471 users s
 
 **Results (C).** Headless Chrome against the deployed page, medians over 40 users.
 
-Table 5: measured cost.
+Table 6: measured cost.
 
 | Stage | Cost |
 |---|---|
