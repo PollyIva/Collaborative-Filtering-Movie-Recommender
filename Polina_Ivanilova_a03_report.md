@@ -178,10 +178,9 @@ ZeroDivisionError: float division by zero
 - Co-rated-only estimation kept the report honest — every similarity in it is backed by a stated co-rating count, so a thin pair is visible rather than averaged away.
 - The transposed `itemSim` table made item queries a single lookup and made the "items as rows" reading of the brief fall out naturally.
 
-**What surprised me, and what did not work.**
-- Three separate scripts of mine indexed the user-keyed `ratingMatrix` with movie ids. Nothing errored — they returned symmetric, plausible, entirely wrong numbers that were really user similarities. Only cross-checking against `BY_ITEM` exposed it.
-- Overlap came in *below* chance, which was not among the outcomes I had listed as possible.
-- Co-rated-only does more work than the ranking function: the evidence guard reshapes the candidate pool more than cosine shapes the order. Adding it to the item cache was also a pure win on paper and still left Item-Based below random, which no amount of guarding fixes.
+**What surprised me.**
+- how serious the cold‑start problem and collaborative filtering are in terms of scalability.
+- how LLM can quickly start changing things that don’t need to be changed
 
 **Next improvement.** Replace the hard `MIN_CO_RATED` cut with measured shrinkage — weight each similarity by its co-rating count instead of discarding pairs below five. That keeps the 1–4 group, which Table 4 shows is 39.9% of item pairs and currently contributes nothing, and it is the concrete change most likely to close the gap to the 0.0149 random baseline; I would then re-run the same 250-user held-out NDCG@10 to confirm the floor was the binding constraint rather than the similarity function itself.
 

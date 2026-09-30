@@ -63,19 +63,6 @@
             from &sect;4 of the report &darr;</a>
         </p>
 
-        <section class="card" id="measured">
-            <h2>Experiments &mdash; the report&rsquo;s seven tables</h2>
-            <p class="panel-why">
-                A companion view of <strong>&sect;4 Experiments</strong> in
-                <a href="Polina_Ivanilova_a03_report.pdf">the written report</a> &mdash; the same seven
-                tables, with the same numbers. Tables 1&ndash;3 are transcribed from the report, Table&nbsp;5
-                is recomputed live in your browser, and the pair-space and agreement counts are read from
-                <a href="experiments/results.json"><code>experiments/results.json</code></a>, which
-                <code>experiments/run.py</code> produces by driving this page in headless Chrome.
-            </p>
-            <div id="exp-tables" class="exp-loading">Loading measurements&hellip;</div>
-        </section>
-
         <section class="card" id="how">
             <h2>How the two lists are built</h2>
             <div class="compare-grid">
@@ -103,6 +90,19 @@
                 has not seen is simply skipped rather than treated as a zero. This single strategy
                 is used consistently everywhere.
             </p>
+        </section>
+
+        <section class="card" id="measured">
+            <h2>Experiments &mdash; the report&rsquo;s seven tables</h2>
+            <p class="panel-why">
+                A companion view of <strong>&sect;4 Experiments</strong> in
+                <a href="Polina_Ivanilova_a03_report.pdf">the written report</a> &mdash; the same seven
+                tables, with the same numbers. Tables 1&ndash;3 are transcribed from the report, Table&nbsp;5
+                is recomputed live in your browser, and the pair-space and agreement counts are read from
+                <a href="experiments/results.json"><code>experiments/results.json</code></a>, which
+                <code>experiments/run.py</code> produces by driving this page in headless Chrome.
+            </p>
+            <div id="exp-tables" class="exp-loading">Loading measurements&hellip;</div>
         </section>
 
     </div>
