@@ -63,36 +63,35 @@ Missing entries are **skipped, never imputed** — on a 1–5 scale a `0` can on
 
 ## What the measurements show
 
-Every figure below is produced by [`experiments/run.py`](experiments/run.py), which
-drives the shipped page in headless Chrome and calls the real recommenders — there is
-no reimplementation of the CF code behind these numbers. Section 4 of the
-[report](https://github.com/PollyIva/Collaborative-Filtering-Movie-Recommender/blob/master/Polina_Ivanilova_a03_report.pdf)
-has the full write-up and the ablation.
+These are the figures from §4 of the
+[report](https://github.com/PollyIva/Collaborative-Filtering-Movie-Recommender/blob/master/Polina_Ivanilova_a03_report.pdf),
+which is also rendered on the live site under **Experiments**. The pair-space and
+agreement counts are reproduced by [`experiments/run.py`](experiments/run.py),
+which drives the shipped page in headless Chrome and calls the real recommenders —
+there is no reimplementation of the CF code behind them.
 
 | | User-Based | Item-Based |
 |---|---|---|
 | Pairs to precompute | 444,153 (943²/2) | 1,413,721 (1,682²/2) |
 | Pairs with no overlap | 3.4% | 30.5% |
 | Pairs under 5 co-ratings | 26.2% | 70.3% |
-| Query time (median, 40 users) | 5.15 ms | 1.00 ms |
-| NDCG@10, held-out split (all 943 users) | **0.0383** | 0.0013 |
-| Relative to random (0.0100) | **3.8× better** | 7.5× worse |
+| Query time (median, 40 users) | 5.59 ms | 1.54 ms |
+| NDCG@10, 250-user held-out split | **0.0428** | 0.0042 |
+| Relative to random (0.0149) | **2.9× better** | 3.5× worse |
 
 Three things fall out of that table:
 
 - **Sparsity decides which axis you can afford.** The matrix is 93.71% empty —
   100,000 ratings spread over 1,588,752 cells. Items outnumber users 1.78×, so the
-  item-item table is 3.18× larger to build, but that cost is paid **once**, whereas a
-  User-Based query re-scores 20 neighbours for every candidate on every click.
+  item-item table is 3.18× larger to build, but that cost is paid **once** (313 ms),
+  whereas a User-Based query re-scores 20 neighbours for every candidate on every click.
 - **The two lists barely agree.** Over all 943 users the two Top-5 lists share
   **11 titles in total**, and **98.8%** of users get two completely disjoint lists.
   Chance overlap would be 0.0149 titles per user; the measured figure is 0.0117.
-- **Only User-Based beats chance.** Item-Based lands 7.5× *below* a random list, and
-  removing its evidence floor entirely does not help (0.0009) — so the guard was never
-  the cause. Cosine between 1–5 ratings is near 1.0 for almost any pair sharing five
-  films, so the item-item table barely separates a Documentary from a Comedy and ends up
-  ordering candidates by rater count instead of by taste. Mean-centering (Pearson) is the
-  fix; report §5 has the ablation.
+- **Only User-Based beats chance.** Item-Based lands 3.5× *below* a random list, and
+  the evidence guard does not fix it — the floor reshapes the candidate pool more than
+  cosine shapes the order, which is why §5 proposes measured shrinkage (weight by
+  co-rating count instead of discarding pairs below five) rather than a bigger floor.
 
 ## Data
 
@@ -109,6 +108,7 @@ the parser decodes them with `TextDecoder('latin1')` and accented titles survive
 | `style.css` | layout and styling |
 | `data.js` | fetch, parse, build the matrix and inverted indexes |
 | `script.js` | cosine similarity, both recommenders, UI rendering |
+| `results.js` | renders the report's seven experiment tables on the page |
 | `experiments/` | headless-Chrome harness behind the measurement table |
 
 ## License

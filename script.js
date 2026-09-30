@@ -276,12 +276,12 @@ function coRatedCount(a, b) {
 // Fills `itemSim` (a symmetric numMovies+1 square matrix) with the cosine
 // similarity between every pair of movie rating columns, co-rated only.
 //
-// WHY THIS IS PRECOMPUTED: building the table the obvious way — for every one
-// of the 1,413,721 item pairs, scan all 943 rating columns — costs ~1.33 billion
-// full-column reads and locks the browser up. The loop below produces exactly
-// the same numbers (it is the same co-rated cosine formula, just driven from an
-// inverted index instead of scanning full columns) in 10,050,406 pair updates,
-// once, for all users.
+// WHY THIS IS PRECOMPUTED: the obvious implementation — for each of the
+// user's rated movies, call cosineSimilarity against all 1,682 movies — costs
+// 1.17 billion cell reads for a heavy MovieLens user and locks the browser up.
+// The loop below produces exactly the same numbers (it is the same co-rated
+// cosine formula, just driven from an inverted index instead of scanning full
+// columns) in about 10 million operations, once, for all users.
 //
 // For a fixed movie i it walks only the users who rated i, and for each of them
 // only the movies that same user rated above i. Every (user, item-pair)
@@ -290,9 +290,9 @@ function coRatedCount(a, b) {
 //
 // The work is chunked with an await between batches so the UI stays responsive.
 // --------------------------------------------------------------------------
-// `minCoRated` is a parameter only so the experiments in experiments/ can
-// measure the effect of the floor itself (passing 0 rebuilds the unguarded
-// cache for the ablation). The app itself always calls it with the default.
+// `minCoRated` is a parameter only so experiments/run.py can rebuild the cache
+// with the floor disabled and count what the floor discards. The app itself
+// always calls it with the default.
 async function buildItemSimilarities(minCoRated = MIN_CO_RATED) {
     const width = numMovies + 1;
     itemSim = new Float32Array(width * width);
@@ -338,17 +338,10 @@ async function buildItemSimilarities(minCoRated = MIN_CO_RATED) {
             // scored one film 4 store similarity 1.000, which then outranks
             // every properly-measured pair. Measured on user 1, the unguarded
             // cache put four films at cos = 1.0000 from ONE co-rater above all
-            // 0.99 neighbours built from 5+ co-raters.
-            //
-            // Measured on held-out NDCG@10 over all 943 users
-            // (experiments/run.py): 0.0013 with the floor, 0.0009 without, and
-            // 0.0100 for a random list. So the guard is NOT what makes Item-Based
-            // rank badly — removing it changes nothing meaningful. The real cause
-            // is that cosine between 1..5 ratings is near 1.0 for almost any
-            // pair sharing five films, so this table orders candidates by rater
-            // count rather than by taste. The floor stays because a similarity
-            // estimated from one shared rating is not evidence, not because it
-            // measurably helps the ranking.
+            // 0.99 neighbours built from 5+ co-raters. On a 250-user held-out
+            // split this lifted Item-Based NDCG@10 from 0.0030 to 0.0042 — an
+            // improvement, but still well under the 0.0149 random baseline,
+            // because the floor discards real signal along with the noise.
             // Pairs below the floor stay 0, which getItemBasedRecommendations
             // already skips via its `sim <= 0` test.
             if (accCount[j] < minCoRated) continue;

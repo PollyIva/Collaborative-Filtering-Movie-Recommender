@@ -63,6 +63,32 @@ header h1 {
     color: #1b6ca8;
 }
 
+/* --- Header nav ------------------------------------------------------------ */
+.page-nav {
+    margin-top: 20px;
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.page-nav a {
+    padding: 7px 16px;
+    border: 1px solid #cfd9df;
+    border-radius: 999px;
+    background: #f7f9fa;
+    color: #1b6ca8;
+    font-size: 0.88rem;
+    font-weight: 600;
+    text-decoration: none;
+    transition: background 0.2s ease, border-color 0.2s ease;
+}
+
+.page-nav a:hover {
+    background: #eef7f0;
+    border-color: #1f8a70;
+}
+
 /* --- Section headings ----------------------------------------------------- */
 .card h2 {
     font-size: 1.15rem;
@@ -327,11 +353,159 @@ button:disabled {
     color: #35505f;
 }
 
+/* --- Measured results tables ---------------------------------------------- */
+#exp-tables.exp-loading {
+    padding: 18px;
+    background: #f1f6fa;
+    border-left: 4px solid #1b6ca8;
+    border-radius: 0 8px 8px 0;
+    color: #35505f;
+    font-size: 0.92rem;
+}
+
+.exp-block {
+    margin-bottom: 30px;
+}
+
+.exp-block:last-child {
+    margin-bottom: 0;
+}
+
+.exp-h4 {
+    margin: 20px 0 8px;
+    font-size: 0.86rem;
+    font-weight: 600;
+    color: #35505f;
+}
+
+.exp-block > h3:first-child + .exp-source + .exp-h4,
+.exp-block > .exp-source:first-child + .exp-h4 {
+    margin-top: 12px;
+}
+
+.exp-source {
+    margin: 2px 0 4px;
+    font-size: 0.8rem;
+    color: #7a8b96;
+}
+
+.data-table + .data-table {
+    margin-top: 14px;
+}
+
+.data-table caption {
+    padding: 0 0 8px;
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: #1b6ca8;
+    text-align: left;
+}
+
+.data-table .diag {
+    font-weight: 700;
+    color: #1b6ca8;
+    background: #eef7f0;
+}
+
+.data-table .corner {
+    background: #16334a;
+}
+
+.data-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.88rem;
+    background: #ffffff;
+    border: 1px solid #e2e8ec;
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.data-table th,
+.data-table td {
+    padding: 9px 13px;
+    text-align: right;
+    border-bottom: 1px solid #edf1f3;
+    white-space: nowrap;
+}
+
+.data-table thead th {
+    background: #1b3d57;
+    color: #ffffff;
+    font-weight: 600;
+    font-size: 0.82rem;
+    letter-spacing: 0.01em;
+}
+
+.data-table thead th:first-child,
+.data-table tbody th {
+    text-align: left;
+}
+
+.data-table tbody th {
+    font-weight: 600;
+    color: #35505f;
+    white-space: normal;
+}
+
+.data-table tbody th.row-label {
+    color: #1b3d57;
+}
+
+.data-table tbody tr:nth-child(even) {
+    background: #f9fbfc;
+}
+
+.data-table tbody tr:last-child th,
+.data-table tbody tr:last-child td {
+    border-bottom: none;
+}
+
+.data-table td {
+    font-variant-numeric: tabular-nums;
+    color: #23303a;
+}
+
+.exp-note {
+    margin-top: 14px;
+    padding: 13px 16px;
+    background: #f7f9fa;
+    border-left: 4px solid #cfd9df;
+    border-radius: 0 8px 8px 0;
+    font-size: 0.86rem;
+    color: #5a6b78;
+}
+
+.exp-note strong {
+    color: #1b3d57;
+}
+
+.exp-note code,
+#measured code {
+    padding: 1px 6px;
+    background: #eef2f5;
+    border-radius: 4px;
+    font-size: 0.85em;
+    color: #1b3d57;
+}
+
+#measured a {
+    color: #1b6ca8;
+}
+
 /* --- Narrow screens: stack the two result columns ------------------------- */
 @media (max-width: 720px) {
     .compare-grid,
     #result-box {
         grid-template-columns: 1fr;
+    }
+
+    .exp-block {
+        overflow-x: auto;
+    }
+
+    .data-table {
+        min-width: 460px;
     }
 
     header {

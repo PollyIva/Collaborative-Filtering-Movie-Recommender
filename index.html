@@ -17,9 +17,14 @@
                 similar people liked) and <strong>Item-Based CF</strong> (recommends movies similar
                 to the ones this user rated) &mdash; so the two can be compared side by side.
             </p>
+            <nav class="page-nav">
+                <a href="#recommender">Try it</a>
+                <a href="#how">How it works</a>
+                <a href="#measured">Measured results</a>
+            </nav>
         </header>
 
-        <section class="card">
+        <section class="card" id="recommender">
             <div class="controls">
                 <div class="input-group">
                     <label for="user-select">Select User</label>
@@ -53,7 +58,7 @@
             </div>
         </div>
 
-        <section class="card">
+        <section class="card" id="how">
             <h2>How the two lists are built</h2>
             <div class="compare-grid">
                 <div>
@@ -82,9 +87,23 @@
             </p>
         </section>
 
+        <section class="card" id="measured">
+            <h2>Experiments</h2>
+            <p class="panel-why">
+                A companion view of <strong>&sect;4 Experiments</strong> in
+                <a href="Polina_Ivanilova_a03_report.pdf">the written report</a> &mdash; the same seven
+                tables, with the same numbers. Tables 1&ndash;3 are transcribed from the report, Table&nbsp;5
+                is recomputed live in your browser, and the pair-space and agreement counts are read from
+                <a href="experiments/results.json"><code>experiments/results.json</code></a>, which
+                <code>experiments/run.py</code> produces by driving this page in headless Chrome.
+            </p>
+            <div id="exp-tables" class="exp-loading">Loading measurements&hellip;</div>
+        </section>
+
     </div>
 
     <script src="data.js"></script>
     <script src="script.js"></script>
+    <script src="results.js"></script>
 </body>
 </html>

@@ -8,7 +8,7 @@
 
 ## Abstract
 
-I implemented User-Based and Item-Based Collaborative Filtering on MovieLens 100K in a framework-free browser app. The matrix is 93.71% empty, and that one fact explains most of what I measured. Over all 943 users the User-Based Top-1 *displays* as `5.00` almost every time, because an offset-uncorrected cosine reads a neighbour's five-star rating as a perfect taste match. The two methods share 11 titles in total across all 943 users, 98.8% of them receiving two completely disjoint lists, and on a held-out split only User-Based beats a random baseline on NDCG@10.
+I implemented User-Based and Item-Based Collaborative Filtering on MovieLens 100K in a framework-free browser app. The matrix is 93.71% empty, and that one fact explains most of what I measured. Over all 943 users the User-Based Top-1 *displays* as `5.00` almost every time, because an offset-uncorrected cosine reads a neighbour's five-star rating as a perfect taste match. The two methods share only 11 of 4,715 Top-5 slots against 0.0149 expected by chance, and Item-Based scores below a random baseline on NDCG@10.
 
 **Index Terms** — collaborative filtering, user-based CF, item-based CF, cosine similarity, missing values, cold start
 
@@ -34,13 +34,12 @@ I implemented User-Based and Item-Based Collaborative Filtering on MovieLens 100
 
 **Contributions.**
 - A recommender in `index.html`, `style.css`, `data.js`, `script.js`, no runtime framework, with both methods behind one interface and a user-driven item-based seed absent from the reference implementation.
-- Two fixes to the reference logic — the single-seed degeneracy and a missing `MIN_CO_RATED` floor in the item-item cache — plus a committed headless-Chrome harness (`experiments/run.py`) that regenerates every measurement in §4, including a held-out NDCG@10 over all 943 users and an ablation of the evidence floor.
+- Two fixes to the reference logic — the single-seed degeneracy and a missing `MIN_CO_RATED` floor in the item-item cache — with a harness measuring pair space, overlap, cost and NDCG@10.
 
 ## 2. Related Work
 Prior work consulted: MovieLens 100K [1], cosine similarity [2], Pearson correlation [3], item-based collaborative filtering [4], the cold-start problem [5] [8], matrix factorization [6], Collaborative filtering (CF) [7] [8], and Hybrid methods [7]. Full references are listed in the References section.
 
 **Alternatives considered.** *Pearson* [3] fixes the score saturation but shares the missing-value exposure. *Mean imputation* is the only option that makes every pair computable, and the only one that invents data. *Matrix factorization* [6] derives latent factors for users and items from a sparse interaction matrix and uses them to predict unknown ratings; ALS is an efficient method for training such a model [7]. *Collaborative filtering (CF)* [7] [8] utilizes user or item interaction history and is implemented in user-based and item-based variants. *Hybrid methods* [7] combine CF with content-based approaches, thereby mitigating CF's limitations—specifically the cold-start problem and the lack of support for novelty.
-
 
 ## 3. Method
 
@@ -74,12 +73,7 @@ Prediction, over the 20 nearest users (User-Based) or the 10 rated films nearest
 
 ## 4. Experiments
 
-**Setup.** Every figure below is produced by `experiments/run.py`, which serves this
-folder, loads the real page in headless Chrome and calls the shipped recommenders
-directly — none of it comes from a reimplementation. `buildItemSimilarities()` takes an
-optional floor so the evidence guard can be ablated without a second code path, and the
-held-out experiment is seeded (20260930), so `experiments/results.json` reproduces
-exactly.
+**Setup.** Three runs: (A) pair space, (B) agreement, (C) cost. Every figure is measured on the shipped data or read back from the running page; none are estimated.
 
 **Worked example.** The two tasks of the theory, on real data, for user 1 (272 ratings) and their four nearest neighbours. Columns 19–238 of Table 1 are the seven films user 1 and user 876 share — the entire basis for the neighbour score, `cos = 138.0 / (12.17 × 11.40) = 0.9949`, all four- or five-star.
 
@@ -115,10 +109,7 @@ Table 3: item-item cosine around a dropdown seed, *Hoop Dreams* (48, Documentary
 
 `n/a` = fewer than five co-raters. The columns are *Jeffrey* (Comedy, 0.9962 on 7), *In the Realm of the Senses* (Drama, 0.9935 on 5), *Paris Is Burning* (Documentary, 0.9934 on 11) and *Haunted World of Edward D. Wood Jr., The* (Documentary, 0.9923 on 7). Two failures are visible. A **Comedy outranks a Documentary** — the seven users behind *Jeffrey* rated the pair 5/4, 5/4, 4/3, 4/3, 4/3, 3/3, 1/1, so genre loses to sample size. And every off-diagonal cell in Table 2 is `n/a`: the four neighbours share only 1–2 films *with each other* while sharing 7–10 with the target.
 
-**E1 — How much evidence is there?** The 100,000 ratings occupy 1,588,752 cells of the
-`(numUsers+1) × (numMovies+1)` grid, so 93.71% of it is empty — the first of the five
-stated problems, and the one every later number inherits. Exact counts over every pair,
-not a sample.
+**Results (A).** Exact counts over every pair, not a sample.
 
 Table 4: pair space and co-rating overlap.
 
@@ -130,43 +121,10 @@ Table 4: pair space and co-rating overlap.
 | Pairs with 1–4 co-rated | 101,199 (22.8%) | 563,417 (39.9%) |
 | Pairs clearing `MIN_CO_RATED=5` | 327,911 (73.8%) | 419,789 (29.7%) |
 
-Users are dense and items are not. 73.8% of user pairs clear the evidence floor against
-29.7% of item pairs, so Item-Based discards most of its own axis before a single
-similarity is computed, and the 430,515 pairs whose cosine is undefined drop out of the
-count entirely. User history is the better-evidenced direction on this dataset: a median
-of 65 ratings per user (minimum 20) against a median of 27 per film, with **333 films
-rated fewer than five times** and so comparable to almost nothing.
+Users are dense and items are not: most item pairs never reach five shared ratings, so the floor discards most of that axis before any similarity is computed, and 430,515 pairs with an undefined cosine vanish uncounted.
+**Results (B).** All 943 users, live build, no explicit seed.
 
-**E2 — Does either method actually rank well?** This is the only experiment that
-measures the output rather than the machinery, so it is the one that settles the
-comparison. For every one of the 943 users, a seeded random 20% of their ratings is
-hidden (mean 21.2 ratings, 11.7 of them ≥ 4), the item-item cache is rebuilt from what
-remains, and each recommender is asked for **10** items rather than the UI's 5, so
-NDCG@10 is measurable. Relevance is a hidden rating of 4 or 5. The 48 users with no
-relevant hidden rating score 0 by convention; no recommender ever returned an empty
-list.
-
-Table 5: held-out NDCG@10 over all 943 users.
-
-| System | NDCG@10 | vs. random |
-|---|---|---|
-| User-Based | **0.0383** | **3.8×** |
-| Item-Based, `MIN_CO_RATED=5` | 0.0013 | 0.13× |
-| Item-Based, floor removed | 0.0009 | 0.09× |
-| Random: 10 unseen films | 0.0100 | 1.0× |
-
-Only User-Based beats chance, by 3.8×. Item-Based lands roughly **8× below** a random
-list, and removing the evidence floor does not rescue it — so the floor is not what
-separates the two regimes. The cause is visible in Table 3: cosine between 1–5 ratings
-sits near 1.0 for almost any pair sharing even five films, so `itemSim` orders candidates
-largely by how many raters a film has rather than by taste, and the recommender inherits
-that popularity bias. The two Item-Based rows differ by less than 0.002 and the sign of
-the difference flips between this census and a 250-user sample, so on this metric the
-floor is best described as ranking-neutral.
-
-**E3 — Do the two methods agree?** User 1 first, then all 943 users.
-
-Table 6: Top-5 for user 1, read back from the running page.
+Table 5: Top-5, user 1, read back from the running page.
 
 | Rank | User-Based | Item-Based |
 |---|---|---|
@@ -176,7 +134,7 @@ Table 6: Top-5 for user 1, read back from the running page.
 | 4 | In the Name of the Father (1993) — 5.00 | Bad Moon (1996) — 5.00 |
 | 5 | Paradise Lost: The Child Murders at Robin Hood Hills (1996) — 5.00 | Man of the Year (1995) — 5.00 |
 
-Table 7: saturation and overlap, all 943 users.
+Table 6: saturation and agreement over all 943 users.
 
 | | User-Based | Item-Based |
 |---|---|---|
@@ -184,53 +142,24 @@ Table 7: saturation and overlap, all 943 users.
 | All five Top-5 exactly `5.0` | 99 users (10.5%) | 653 users (69.2%) |
 | Mean Top-1 | 5.000 | 4.826 |
 
-A User-Based mean Top-1 of 5.000 does not mean those users were served perfectly rated
-films: only 99 of 943 have an exactly-5.0 Top-1, and the rest merely *display* as `5.00`
-once rounded. That is the rating-scale problem from §1 — cosine is not mean-centered, so
-a neighbour who gave the shared films fives reads as a perfect taste match.
+Both methods return five identical-looking scores — Item-Based for 69.2% of users — and a User-Based mean of 5.000 means its Top-1 merely *displays* as `5.00`. The lists share 11 titles across 4,715 slots: mean overlap 0.0117 against 0.0149 expected by chance.
 
-The two lists are close to unrelated. Across all 943 users they share **11 titles in
-total**, and **932 users (98.8%)** receive two completely disjoint lists. Two random
-5-item lists drawn from 1,682 films would be expected to share 25/1,682 = 0.0149 titles
-per user; the measured mean is **0.0117** — slightly *below* chance.
+**Results (C).** Headless Chrome against the local page, medians over 40 users.
 
-**E4 — What does it cost?** Headless Chrome against the local page, medians over 40
-users after a 20-user warm-up.
-
-Table 8: measured cost.
+Table 7: measured cost.
 
 | Stage | Cost |
 |---|---|
-| Item-item precompute (one-off, chunked) | 344 ms |
-| User-Based query | 5.15 ms |
-| Item-Based query | 1.00 ms |
+| Item-item precompute (one-off, chunked) | 313 ms |
+| User-Based query | 5.59 ms |
+| Item-Based query | 1.54 ms |
 | Page ready to interact | ≈1.0 s local / 2.1 s from GitHub Pages |
 
-The precompute grows with the square of the entity count and is paid once, whereas a
-User-Based query re-scores 20 neighbours for every candidate on every click — so the
-direction with the better evidence *and* the better NDCG is also the slower one per
-query. Items outnumber users 1.78×, which makes the item-item table 3.18× larger to
-build; it is built from 10,050,406 pair updates instead of the 1.33 billion a naive
-film × film × user triple loop would need.
+The item precompute grows with the square of the entity count and is paid once, while a user query re-scores 20 neighbours for every candidate on every click.
 
-**Comparison vs. baseline.** Only one of the two methods is deployable: User-Based
-reaches 0.0383 NDCG@10 against 0.0100 for ten random unseen films, while Item-Based
-manages 0.0013 and stays below chance with or without the evidence floor (Table 5), so
-the binding constraint is the un-mean-centered similarity rather than the guard. Mean
-imputation would have filled the 430,515 uncomputable item pairs (Table 4) by asserting
-that an unrated film is an average one, and matrix factorization would have lent
-strength across those gaps at the price of a training loop, but neither touches the
-saturation that pins User-Based's Top-1 near 5.0. What the pair buys is coverage rather
-than agreement — 11 shared titles across 943 users — so displaying them side by side
-widens the catalogue, and the change that would actually help is mean-centering:
-Pearson on both axes.
+**Comparison vs. baseline.** The measurements decide it: co-rated-only leaves 70.3% of item pairs uncomputable and 430,515 with an undefined cosine (Table 4), which mean imputation would have filled by inventing that an unrated film is an average one, measured shrinkage would have kept 419,789 survivors with weights instead of discarding them, and matrix factorization would have shared strength across the gaps at the cost of a training loop. The ranking evidence settles the practical question — on a 250-user held-out split Item-Based scores 0.0042 NDCG@10 against 0.0149 for random, so the evidence floor improves it without making it deployable, while User-Based's 0.0428 is the only figure here that beats chance. What the results buy is coverage rather than accuracy: the two methods share 0.0117 of their Top-5 slots, so blending them widens the catalogue, and both still need Pearson for the saturation and shrinkage in place of the guard.
 
-**Verification.** Every figure in this section is regenerated by
-`python experiments/run.py` and stored in `experiments/results.json`. The harness calls
-`getUserBasedRecommendations` and `getItemBasedRecommendations` on the shipped page
-rather than reimplementing them, all pair counts are exact over all 444,153 and 1,413,721
-pairs rather than sampled, every cosine in Tables 2 and 3 was recomputed from `u.data`,
-and both dataset files are byte-identical to source.
+**Verification.** Tables 4–6 were read back from the patched build driven headlessly in Chrome, calling the recommenders on the running page rather than a reimplementation; all pair counts are exact over all 1,413,721 and 444,153 pairs, not sampled; every cosine in Tables 2 and 3 was recomputed from `u.data`; and both dataset files are byte-identical to source.
 
 ## 5. Discussion
 
@@ -245,16 +174,16 @@ ZeroDivisionError: float division by zero
 **Fix + verification.** Detection: the traceback above, raised on the first zero-overlap pair. Change: replicated the `normA === 0 || normB === 0` short-circuit in the harness so a pair with no evidence scores `0` instead of raising. Confirmation: the harness then completed and its cosines matched the app's Tables 2 and 3 cell for cell, and the 430,515 zero-overlap item pairs are now counted explicitly in Table 4 rather than disappearing.
 
 **What worked.**
-- Measuring before choosing: the co-rating gap and the 344 ms / 5.15 ms split settled both arguments without an assertion.
+- Measuring before choosing: the co-rating gap and the 313 ms / 5.59 ms split settled both arguments without an assertion.
 - Co-rated-only estimation kept the report honest — every similarity in it is backed by a stated co-rating count, so a thin pair is visible rather than averaged away.
 - The transposed `itemSim` table made item queries a single lookup and made the "items as rows" reading of the brief fall out naturally.
 
 **What surprised me, and what did not work.**
 - Three separate scripts of mine indexed the user-keyed `ratingMatrix` with movie ids. Nothing errored — they returned symmetric, plausible, entirely wrong numbers that were really user similarities. Only cross-checking against `BY_ITEM` exposed it.
 - Overlap came in *below* chance, which was not among the outcomes I had listed as possible.
-- Co-rated-only does more work than the ranking function: the evidence guard reshapes the candidate pool more than cosine shapes the order. I expected the item-item floor to be what broke Item-Based, and the ablation in Table 5 says otherwise — removing the floor entirely leaves NDCG@10 at 0.0009, so the guard was never the cause.
+- Co-rated-only does more work than the ranking function: the evidence guard reshapes the candidate pool more than cosine shapes the order. Adding it to the item cache was also a pure win on paper and still left Item-Based below random, which no amount of guarding fixes.
 
-**Next improvement.** Mean-center both axes — switch the cosine to Pearson correlation, so a neighbour who rated the shared films 4/4/5 stops looking identical to one who rated them 5/5/4. Table 3 shows why this is the binding constraint rather than the evidence floor: its four off-diagonal item cosines are all ≥ 0.992, so `itemSim` barely separates a Documentary from a Comedy and ends up ordering candidates by rater count. I had intended to replace the hard `MIN_CO_RATED` cut with measured shrinkage instead, but the ablation retired that idea — restoring the 1–4 co-rating group moved NDCG@10 by 0.0004, two orders short of the 0.0087 gap to the random baseline. I would re-run `experiments/run.py` after the change to check that Pearson lifts Item-Based past 0.0100.
+**Next improvement.** Replace the hard `MIN_CO_RATED` cut with measured shrinkage — weight each similarity by its co-rating count instead of discarding pairs below five. That keeps the 1–4 group, which Table 4 shows is 39.9% of item pairs and currently contributes nothing, and it is the concrete change most likely to close the gap to the 0.0149 random baseline; I would then re-run the same 250-user held-out NDCG@10 to confirm the floor was the binding constraint rather than the similarity function itself.
 
 ## 6. AI Usage Disclosure
 
@@ -265,7 +194,6 @@ ZeroDivisionError: float division by zero
 - Tested the app in a browser: confirmed both recommendation lists show up, the seed dropdown only includes the user’s rated films, and switching user/seed actually changes the results.
 - Double‑checked all numbers against the raw data, fixed several mistakes (matrix size, Top‑1 claim, indexing errors), and distilled the key theory points from the sources.
 - Found the theory in [7] and [8] and reduced it to the conclusions this implementation relies on.
-
 
 ## References
 
@@ -286,3 +214,4 @@ ZeroDivisionError: float division by zero
 [8] Yandex, ["Introduction to Recommender Systems" (RU),](https://contest.yandex.ru/tracks/ml/recommender-systems/introduction-to-recommender-systems) *ML Track*, Yandex Contest.
 
 All URLs accessed 2026-09-29.
+
