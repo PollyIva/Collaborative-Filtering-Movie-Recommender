@@ -328,6 +328,21 @@ async function buildItemSimilarities() {
         const base = i * width;
         for (let k = 0; k < nTouched; k++) {
             const j = touched[k];
+
+            // Same evidence floor as getUserBasedRecommendations. Without it
+            // accCount is computed and thrown away, and the cache fills up with
+            // cosines taken from a single shared rating — two users who both
+            // scored one film 4 store similarity 1.000, which then outranks
+            // every properly-measured pair. Measured on user 1, the unguarded
+            // cache put four films at cos = 1.0000 from ONE co-rater above all
+            // 0.99 neighbours built from 5+ co-raters. On a 250-user held-out
+            // split this lifted Item-Based NDCG@10 from 0.0030 to 0.0042 — an
+            // improvement, but still well under the 0.0149 random baseline,
+            // because the floor discards real signal along with the noise.
+            // Pairs below the floor stay 0, which getItemBasedRecommendations
+            // already skips via its `sim <= 0` test.
+            if (accCount[j] < MIN_CO_RATED) continue;
+
             const denom = accNa[j] * accNb[j];
 
             // denom === 0 means the pair had no co-rated user with a non-zero
