@@ -1,0 +1,98 @@
+{
+  "config": {
+    "K": 10,
+    "REL": 4,
+    "N_EVAL": 943,
+    "HOLDOUT": 0.2,
+    "SEED": 20260930,
+    "COST_USERS": 40
+  },
+  "dataset": {
+    "users": 943,
+    "movies": 1682,
+    "ratings": 100000,
+    "cells": 1588752,
+    "emptyPct": 93.70575143257098,
+    "perUser": {
+      "min": 20,
+      "median": 65,
+      "max": 737
+    },
+    "perItem": {
+      "min": 1,
+      "median": 27,
+      "max": 583,
+      "under5": 333
+    }
+  },
+  "pairSpace": {
+    "user": {
+      "pairs": 444153,
+      "zero": 15043,
+      "low": 101199,
+      "high": 327911,
+      "clearing": 327911
+    },
+    "item": {
+      "pairs": 1413721,
+      "zero": 430515,
+      "low": 563417,
+      "high": 419789,
+      "clearing": 419789
+    }
+  },
+  "agreement": {
+    "userBased": {
+      "usersWithAList": 943,
+      "top1Exactly5": 99,
+      "top1Exactly5Pct": 10.498409331919406,
+      "all5Exactly5": 99,
+      "all5Exactly5Pct": 10.498409331919406,
+      "meanTop1": 5.000000000000001
+    },
+    "itemBased": {
+      "usersWithAList": 943,
+      "top1Exactly5": 759,
+      "top1Exactly5Pct": 80.48780487804878,
+      "all5Exactly5": 653,
+      "all5Exactly5Pct": 69.24708377518557,
+      "meanTop1": 4.826151110395696
+    },
+    "compared": 943,
+    "sharedTitles": 11,
+    "usersWithZeroOverlap": 932,
+    "usersWithZeroOverlapPct": 98.83351007423117,
+    "meanSharedPerUser": 0.01166489925768823,
+    "expectedSharedPerUser": 0.014863258026159334
+  },
+  "cost": {
+    "precomputeMs": 343.5,
+    "userQueryMsMedian": 5.149999976158142,
+    "itemQueryMsMedian": 1,
+    "timedUsers": 40
+  },
+  "ndcg": {
+    "users": 943,
+    "meanHeldOut": 21.208907741251327,
+    "meanRelevantHeldOut": 11.717921527041357,
+    "usersWithNoRelevantHoldout": 48,
+    "emptyLists": {
+      "userBased": 0,
+      "itemBased": 0,
+      "itemBasedUnguarded": 0
+    },
+    "mean": {
+      "userBased": 0.03826962166939969,
+      "itemBased": 0.0013332479024325853,
+      "itemBasedUnguarded": 0.0009209688858499397,
+      "random": 0.010000294404559507
+    },
+    "median": {
+      "userBased": 0,
+      "itemBased": 0,
+      "itemBasedUnguarded": 0,
+      "random": 0
+    }
+  },
+  "wallClockSeconds": 746.3
+}
